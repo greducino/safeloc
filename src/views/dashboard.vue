@@ -4,59 +4,55 @@
     <div class="app-layout">
       <Sidebar />
       <main class="main-content">
+
+        <!-- Cabeçalho -->
         <div class="page-header">
-          <h1>📊 Dashboard</h1>
-          <span class="welcome">Olá, {{ userName }}!</span>
+          <h1 class="page-title">Dashboard</h1>
+          <span class="welcome-pill">Olá, {{ userName }}!</span>
         </div>
 
-        <div class="stats-grid">
+        <!-- Stats -->
+        <div class="stats-row">
           <div class="stat-card">
-            <div class="stat-icon" style="background:#dbeafe">🦺</div>
-            <div class="stat-info">
-              <h3>{{ stats.totalEpis }}</h3>
-              <p>Total de EPIs</p>
-            </div>
+            <span class="stat-num">{{ stats.totalEpis }}</span>
+            <span class="stat-lbl">Total de EPIs</span>
+            <span class="stat-ico" style="background:#dbeafe">🦺</span>
           </div>
           <div class="stat-card">
-            <div class="stat-icon" style="background:#dcfce7">✅</div>
-            <div class="stat-info">
-              <h3>{{ stats.episDisponiveis }}</h3>
-              <p>EPIs Disponíveis</p>
-            </div>
+            <span class="stat-num">{{ stats.episDisponiveis }}</span>
+            <span class="stat-lbl">EPIs Disponíveis</span>
+            <span class="stat-ico" style="background:#dcfce7">✅</span>
           </div>
           <div class="stat-card">
-            <div class="stat-icon" style="background:#fee2e2">🔴</div>
-            <div class="stat-info">
-              <h3>{{ stats.episIndisponiveis }}</h3>
-              <p>Indisponíveis</p>
-            </div>
+            <span class="stat-num">{{ stats.episIndisponiveis }}</span>
+            <span class="stat-lbl">Indisponíveis</span>
+            <span class="stat-ico" style="background:#fee2e2">🔴</span>
           </div>
           <div class="stat-card">
-            <div class="stat-icon" style="background:#fef9c3">📋</div>
-            <div class="stat-info">
-              <h3>{{ stats.pendentes }}</h3>
-              <p>Pendentes</p>
-            </div>
+            <span class="stat-num stat-warn">{{ stats.pendentes }}</span>
+            <span class="stat-lbl">Pendentes</span>
+            <span class="stat-ico" style="background:#fef9c3">📋</span>
           </div>
           <div class="stat-card">
-            <div class="stat-icon" style="background:#ede9fe">👷</div>
-            <div class="stat-info">
-              <h3>{{ stats.totalFuncionarios }}</h3>
-              <p>Funcionários</p>
-            </div>
+            <span class="stat-num">{{ stats.totalFuncionarios }}</span>
+            <span class="stat-lbl">Funcionários</span>
+            <span class="stat-ico" style="background:#ede9fe">👷</span>
           </div>
         </div>
 
-        <!-- Últimas Solicitações -->
-        <div class="card">
-          <div class="section-header">
-            <h2>📋 Últimas Solicitações</h2>
-            <RouterLink to="/locacao" class="btn btn-dark btn-sm">Ver todas</RouterLink>
+        <!-- Tabela principal -->
+        <div class="main-card">
+          <div class="main-card-header">
+            <h2 class="main-card-title">Últimas Solicitações</h2>
+            <RouterLink to="/locacao" class="btn-ver">Ver todas</RouterLink>
           </div>
-          <div v-if="loadingLocacoes" class="loading">Carregando...</div>
-          <div v-else-if="ultimasLocacoes.length === 0" class="empty-state">Nenhuma solicitação registrada ainda.</div>
-          <div v-else class="table-wrap">
-            <table>
+
+          <div v-if="loadingLocacoes" class="state-msg">Carregando...</div>
+          <div v-else-if="ultimasLocacoes.length === 0" class="state-msg">
+            Nenhuma solicitação registrada ainda.
+          </div>
+          <div v-else class="tbl-wrap">
+            <table class="tbl">
               <thead>
                 <tr>
                   <th>EPI</th>
@@ -67,11 +63,9 @@
               </thead>
               <tbody>
                 <tr v-for="loc in ultimasLocacoes" :key="loc.id">
-                  <!-- Relacionamento: epi.nome (tabela 'epi') -->
-                  <td>{{ loc.epi?.nome || '—' }}</td>
-                  <!-- Relacionamento: aluno.nome (tabela 'aluno') -->
+                  <td class="td-bold">{{ loc.epi?.nome || '—' }}</td>
                   <td>{{ loc.aluno ? `${loc.aluno.nome} ${loc.aluno.sobrenome}` : '—' }}</td>
-                  <td>{{ formatDate(loc.data_solicitacao) }}</td>
+                  <td class="td-muted">{{ formatDate(loc.data_solicitacao) }}</td>
                   <td>
                     <span class="badge" :class="badgeStatus(loc.status)">
                       {{ loc.status }}
@@ -84,28 +78,29 @@
         </div>
 
         <!-- Atalhos rápidos -->
-        <div class="quick-actions">
+        <div class="quick-grid">
           <RouterLink to="/epis" class="quick-card">
-            <span>🦺</span>
+            <span class="quick-ico">🦺</span>
             <strong>Gerenciar EPIs</strong>
             <small>Cadastrar, editar e listar equipamentos</small>
           </RouterLink>
           <RouterLink to="/locacao" class="quick-card">
-            <span>📋</span>
+            <span class="quick-ico">📋</span>
             <strong>Nova Solicitação</strong>
             <small>Registrar pedido de EPI</small>
           </RouterLink>
           <RouterLink to="/funcionarios" class="quick-card">
-            <span>👷</span>
+            <span class="quick-ico">👷</span>
             <strong>Funcionários</strong>
             <small>Gerenciar cadastro de funcionários</small>
           </RouterLink>
           <RouterLink to="/alunos" class="quick-card">
-            <span>🎓</span>
+            <span class="quick-ico">🎓</span>
             <strong>Alunos</strong>
             <small>Gerenciar cadastro de alunos</small>
           </RouterLink>
         </div>
+
       </main>
     </div>
   </div>
@@ -116,7 +111,6 @@ import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import MenuNav from '@/components/menu.vue'
 import Sidebar from '@/components/sidebar.vue'
-// Importações corretas: tabelas 'epi', 'funcionario', 'solicitacoes' (singular)
 import { supabase, useDashboard, useLocacoes } from '@/composables/useSupabase.js'
 
 const userName = ref('Usuário')
@@ -126,16 +120,12 @@ const ultimasLocacoes = ref([])
 const loadingLocacoes = ref(true)
 
 onMounted(async () => {
-  // Nome do usuário logado
   const { data: authData } = await supabase.auth.getUser()
   userName.value = authData.user?.user_metadata?.nome_completo
     || authData.user?.email
     || 'Usuário'
 
-  // Carrega stats do dashboard (usa tabelas 'epi', 'aluno', 'funcionario', 'solicitacoes')
   await carregarDashboard()
-
-  // Carrega últimas solicitações com join em 'epi' e 'aluno'
   await listarLocacoes()
   ultimasLocacoes.value = locacoes.value.slice(0, 8)
   loadingLocacoes.value = false
@@ -159,168 +149,214 @@ function badgeStatus(status) {
 </script>
 
 <style scoped>
-/* ── Cabeçalho da página ───────────────────────────────────────────────── */
+  .app-layout {
+    display: flex;
+    flex-direction: row;
+  }
+/* ── Layout base ─────────────────────────────────────────────────────────── */
+.main-content {
+  flex: 1;
+  padding: 28px 32px;
+  overflow-y: auto;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+/* ── Cabeçalho ───────────────────────────────────────────────────────────── */
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
-.page-header h1 {
-  font-size: 1.4rem;
+.page-title {
+  font-size: 1.35rem;
   font-weight: 700;
   color: #1e293b;
+  letter-spacing: -0.01em;
 }
-.welcome {
-  font-size: 0.9rem;
+.welcome-pill {
+  font-size: 0.82rem;
   color: #64748b;
-  background: #f1f5f9;
+  background: #fff;
+  border: 1px solid #e2e8f0;
   padding: 5px 14px;
   border-radius: 20px;
-  border: 1px solid #e2e8f0;
 }
 
-/* ── Grid de estatísticas ───────────────────────────────────────────────── */
-.stats-grid {
+/* ── Stats ───────────────────────────────────────────────────────────────── */
+.stats-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 14px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 22px;
 }
 .stat-card {
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 18px 16px;
+  padding: 18px 16px 16px;
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   transition: transform 0.15s, box-shadow 0.15s;
+  overflow: hidden;
 }
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(30,58,95,0.1);
+  box-shadow: 0 4px 12px rgba(30,58,95,0.09);
 }
-.stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+.stat-num {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+}
+.stat-num.stat-warn { color: #b45309; }
+.stat-lbl {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+.stat-ico {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
-  flex-shrink: 0;
-}
-.stat-info h3 {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: #1e293b;
-  margin: 0;
-  line-height: 1;
-}
-.stat-info p {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin: 4px 0 0;
+  font-size: 1.1rem;
 }
 
-/* ── Card genérico ──────────────────────────────────────────────────────── */
-.card {
+/* ── Tabela principal ────────────────────────────────────────────────────── */
+.main-card {
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  padding: 20px 22px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  margin-bottom: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  margin-bottom: 22px;
+  overflow: hidden;
 }
-
-/* ── Tabela de locações ─────────────────────────────────────────────────── */
-.section-header {
+.main-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  padding: 18px 22px;
+  border-bottom: 1px solid #f1f5f9;
 }
-.section-header h2 {
+.main-card-title {
   font-size: 0.95rem;
   font-weight: 700;
   color: #1e293b;
 }
-.table-wrap { overflow-x: auto; }
-table {
+.btn-ver {
+  background: #1e3a5f;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.btn-ver:hover { background: #163050; }
+
+.tbl-wrap { overflow-x: auto; }
+.tbl {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
-thead tr {
+.tbl thead tr {
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
 }
-th {
+.tbl th {
   text-align: left;
-  padding: 10px 14px;
+  padding: 11px 20px;
   font-size: 11px;
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-td {
-  padding: 12px 14px;
+.tbl td {
+  padding: 13px 20px;
   color: #374151;
   border-bottom: 1px solid #f1f5f9;
 }
-tbody tr:last-child td { border-bottom: none; }
-tbody tr:hover { background: #f8fafc; }
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl tbody tr:hover { background: #f8fafc; }
+.td-bold { font-weight: 600; color: #1e293b; }
+.td-muted { color: #94a3b8; }
 
-/* ── Badges de status ───────────────────────────────────────────────────── */
+/* ── Badges ──────────────────────────────────────────────────────────────── */
 .badge {
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
   display: inline-block;
+  text-transform: capitalize;
 }
 .badge-warning { background: #fef9c3; color: #854d0e; }
 .badge-success { background: #dcfce7; color: #166534; }
 .badge-info    { background: #dbeafe; color: #1e40af; }
 .badge-danger  { background: #fee2e2; color: #991b1b; }
 
-/* Botão Ver todas */
-.btn { padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; font-family: inherit; }
-.btn-dark { background: #1e3a5f; color: #fff; }
-.btn-dark:hover { background: #163050; }
-.btn-sm { padding: 5px 12px; font-size: 12px; }
+/* ── Estado vazio / loading ──────────────────────────────────────────────── */
+.state-msg {
+  text-align: center;
+  padding: 40px;
+  color: #94a3b8;
+  font-size: 13px;
+}
 
-.empty-state { text-align: center; padding: 36px; color: #94a3b8; font-size: 13px; }
-.loading     { text-align: center; padding: 24px;  color: #94a3b8; font-size: 13px; }
-
-/* ── Atalhos rápidos ────────────────────────────────────────────────────── */
-.quick-actions {
+/* ── Quick actions ───────────────────────────────────────────────────────── */
+.quick-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-  margin-top: 0;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
 .quick-card {
   background: #fff;
   border: 1.5px solid #e2e8f0;
   border-radius: 14px;
-  padding: 22px 18px;
+  padding: 22px 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   text-decoration: none;
   transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .quick-card:hover {
-  box-shadow: 0 6px 18px rgba(30,58,95,0.12);
+  box-shadow: 0 6px 18px rgba(30,58,95,0.1);
   transform: translateY(-3px);
   border-color: #1e3a5f;
 }
-.quick-card span   { font-size: 1.7rem; }
-.quick-card strong { color: #1e3a5f; font-size: 0.9rem; display: block; }
-.quick-card small  { color: #94a3b8; font-size: 0.75rem; line-height: 1.4; }
+.quick-ico  { font-size: 1.6rem; margin-bottom: 2px; }
+.quick-card strong { color: #1e3a5f; font-size: 0.88rem; display: block; }
+.quick-card small  { color: #94a3b8; font-size: 0.73rem; line-height: 1.4; }
+
+/* ── Responsivo ──────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .stats-row  { grid-template-columns: repeat(3, 1fr); }
+  .quick-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .main-content { padding: 16px; }
+  .stats-row  { grid-template-columns: repeat(2, 1fr); }
+  .quick-grid { grid-template-columns: 1fr 1fr; }
+}
 </style>

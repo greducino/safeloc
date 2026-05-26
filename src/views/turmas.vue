@@ -43,7 +43,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-700 text-slate-300 text-sm">
-            <tr v-for="turma in turmasFiltradas" :key="turma.id" class="hover:bg-slate-700/50 transition-colors">
+            <tr v-for="turma in turmasFiltradas" :key="turma.idturma" class="hover:bg-slate-700/50 transition-colors">
               <td class="p-4 font-bold text-white">{{ turma.nome }}</td>
               <td class="p-4 text-slate-400">{{ turma.nomenclatura || '—' }}</td>
               <td class="p-4">
@@ -59,7 +59,7 @@
                 <button @click="abrirModalEdicao(turma)" class="p-2 text-amber-500 hover:bg-amber-950/30 rounded-lg transition-colors">
                   <i class="fa-solid fa-pen-to-square"></i>
                 </button>
-                <button @click="deletarTurmaConfirm(turma.id, turma.nome)" class="p-2 text-red-500 hover:bg-red-950/30 rounded-lg transition-colors">
+                <button @click="deletarTurmaConfirm(turma.idturma, turma.nome)" class="p-2 text-red-500 hover:bg-red-950/30 rounded-lg transition-colors">
                   <i class="fa-solid fa-trash"></i>
                 </button>
               </td>
@@ -144,7 +144,7 @@
             <i class="fa-solid fa-spinner fa-spin text-2xl text-cyan-500"></i>
           </div>
           <ul v-else-if="listaAlunosTurma.length > 0" class="space-y-3">
-            <li v-for="rel in listaAlunosTurma" :key="rel.aluno?.id"
+            <li v-for="rel in listaAlunosTurma" :key="rel.aluno?.idaluno"
               class="flex items-center gap-4 bg-slate-900 p-3 rounded-lg border border-slate-700">
               <div class="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center font-bold text-cyan-400">
                 {{ rel.aluno?.nome?.charAt(0) }}
@@ -228,7 +228,7 @@ const abrirModalCadastro = () => {
 
 const abrirModalEdicao = (turma) => {
   editando.value = true
-  idEdicao.value = turma.id
+  idEdicao.value = turma.idturma
   form.value = {
     nome:              turma.nome              || '',
     nomenclatura:      turma.nomenclatura      || '',
@@ -250,7 +250,7 @@ const salvarTurma = async () => {
     if (!payload.data_termino)      delete payload.data_termino
 
     if (editando.value) {
-      const { error } = await supabase.from('turma').update(payload).eq('id', idEdicao.value)
+      const { error } = await supabase.from('turma').update(payload).eq('idturma', idEdicao.value)
       if (error) throw error
     } else {
       const { error } = await supabase.from('turma').insert([payload])
@@ -266,7 +266,7 @@ const salvarTurma = async () => {
 const deletarTurmaConfirm = async (id, nome) => {
   if (!confirm(`Excluir a turma "${nome}"?`)) return
   try {
-    const { error } = await supabase.from('turma').delete().eq('id', id)
+    const { error } = await supabase.from('turma').delete().eq('idturma', id)
     if (error) throw error
     buscarTurmas()
   } catch {
@@ -283,8 +283,8 @@ const verAlunosDaTurma = async (turma) => {
     // Tabela associativa 'aluno_has_turma' com join em 'aluno'
     const { data, error } = await supabase
       .from('aluno_has_turma')
-      .select(`aluno (id, nome, sobrenome, cpf, email)`)
-      .eq('turma_id', turma.id)
+      .select(`aluno (idaluno, nome, sobrenome, cpf, email)`)
+      .eq('turma_id', turma.idturma)
     if (error) throw error
     listaAlunosTurma.value = data
   } catch (e) {

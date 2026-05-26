@@ -1,224 +1,257 @@
 <template>
-  <div class="page">
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">Funcionários</h2>
-        <p class="page-sub">Gerencie os funcionários do sistema.</p>
-      </div>
-      <button class="btn-primary" @click="abrirModal()">+ Novo Funcionário</button>
-    </div>
+  <div>
+    <MenuNav />
+    <div class="app-layout">
+      <Sidebar />
+      <main class="main-content">
+        <div class="funcionarios-page">
+          <div class="page-header">
+            <div class="header-left">
+              <span class="header-icon">👷</span>
+              <div>
+                <h1>Funcionários</h1>
+                <p class="subtitle">Gestão de colaboradores e setores</p>
+              </div>
+            </div>
+            <button class="btn-primary" @click="abrirModal()">+ Novo funcionário</button>
+          </div>
 
-    <div class="search-bar">
-      <span class="search-icon">🔍</span>
-      <input v-model="busca" class="search-input" placeholder="Buscar por nome, CPF ou função…" />
-    </div>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-icon-box" style="background:#eff6ff">👥</div>
+              <div><div class="stat-value">{{ funcionarios.length }}</div><div class="stat-label">Total</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-box" style="background:#f0fdf4">🏢</div>
+              <div><div class="stat-value">{{ setoresUnicos.length }}</div><div class="stat-label">Setores</div></div>
+            </div>
+          </div>
 
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Carregando funcionários…</p>
-    </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-count">{{ funcionariosFiltrados.length }} registros</span>
+              <div class="search-wrap">
+                <span class="search-icon">🔍</span>
+                <input v-model="busca" type="text" placeholder="Buscar por nome, cargo ou setor..." class="input-busca" />
+              </div>
+            </div>
 
-    <div v-else class="table-card">
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Nome</th><th>CPF</th><th>Função</th><th>Status</th><th>Telefone</th><th class="th-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="f in listaFiltrada" :key="f.idfuncionario">
-              <td class="td-name">{{ f.nome }} {{ f.sobrenome }}</td>
-              <td class="td-mono">{{ f.cpf }}</td>
-              <td>{{ f.funcao }}</td>
-              <td><span :class="['status-badge', 'status-' + f.status]">{{ f.status }}</span></td>
-              <td>{{ f.telefone || '–' }}</td>
-              <td class="td-actions">
-                <button class="icon-btn" @click="abrirModal(f)" title="Editar">✏️</button>
-                <button class="icon-btn delete-btn" @click="toggleStatus(f)" :title="f.status === 'ativo' ? 'Inativar' : 'Ativar'">
-                  {{ f.status === 'ativo' ? '🔒' : '🔓' }}
+            <div v-if="loading" class="estado-vazio"><div class="spinner"></div> Carregando...</div>
+            <div v-else-if="funcionariosFiltrados.length === 0" class="estado-vazio">
+              <span class="empty-icon">👤</span> Nenhum funcionário encontrado.
+            </div>
+
+            <div v-else class="tabela-wrapper">
+              <table class="tabela">
+                <thead>
+                  <tr>
+                    <th>Colaborador</th>
+                    <th>Matrícula</th>
+                    <th>Cargo</th>
+                    <th>Setor</th>
+                    <th>Contato</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="f in funcionariosFiltrados" :key="f.idfuncionario">
+                    <td>
+                      <div class="avatar-nome">
+                        <div class="avatar">{{ iniciais(f.nome) }}</div>
+                        <div class="nome-text">{{ f.nome }}</div>
+                      </div>
+                    </td>
+                    <td><span class="mono">{{ f.matricula || '—' }}</span></td>
+                    <td><span class="mono">{{ f.cargo || '—' }}</span></td>
+                    <td><span class="badge-setor">{{ f.setor || '—' }}</span></td>
+                    <td class="mono">{{ f.contato || '—' }}</td>
+                    <td>
+                      <div class="acoes">
+                        <button class="btn-acao editar" @click="abrirModal(f)">Editar</button>
+                        <button class="btn-acao excluir" @click="excluir(f.idfuncionario)">Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div v-if="modalAberto" class="modal-overlay" @click.self="fecharModal">
+            <div class="modal">
+              <div class="modal-header">
+                <h2>{{ editando ? 'Editar funcionário' : 'Novo funcionário' }}</h2>
+                <button class="btn-fechar" @click="fecharModal">✕</button>
+              </div>
+              <div class="modal-body">
+                <div class="campo">
+                  <label>Nome completo *</label>
+                  <input v-model="form.nome" type="text" placeholder="Ex: João da Silva" />
+                </div>
+                <div class="campo">
+                  <label>Matrícula</label>
+                  <input v-model="form.matricula" type="text" placeholder="Ex: 00101" />
+                </div>
+                <div class="campo">
+                  <label>Cargo</label>
+                  <input v-model="form.cargo" type="text" placeholder="Ex: Operador, Analista..." />
+                </div>
+                <div class="campo">
+                  <label>Setor</label>
+                  <input v-model="form.setor" type="text" placeholder="Ex: Produção, Logística..." />
+                </div>
+                <div class="campo">
+                  <label>Contato</label>
+                  <input v-model="form.contato" type="text" placeholder="Ex: (11) 99999-0000" />
+                </div>
+                <p v-if="erro" class="msg-erro">{{ erro }}</p>
+              </div>
+              <div class="modal-footer">
+                <button class="btn-cancelar" @click="fecharModal">Cancelar</button>
+                <button class="btn-primary" :disabled="salvando" @click="salvar">
+                  {{ salvando ? 'Salvando...' : (editando ? 'Salvar alterações' : 'Cadastrar') }}
                 </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Modal -->
-    <div v-if="modal" class="overlay" @click.self="modal = false">
-      <div class="modal">
-        <div class="modal-header">
-          <h3 class="modal-title">{{ form.idfuncionario ? 'Editar Funcionário' : 'Novo Funcionário' }}</h3>
-          <button class="modal-close" @click="modal = false">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-row2">
-            <div class="form-field"><label class="form-label">Nome *</label><input v-model="form.nome" class="form-input" /></div>
-            <div class="form-field"><label class="form-label">Sobrenome *</label><input v-model="form.sobrenome" class="form-input" /></div>
+              </div>
+            </div>
           </div>
-          <div class="form-field"><label class="form-label">CPF *</label><input v-model="form.cpf" maxlength="14" class="form-input" /></div>
-          <div class="form-field"><label class="form-label">E-mail *</label><input v-model="form.email" type="email" class="form-input" /></div>
-          <div class="form-row2">
-            <div class="form-field"><label class="form-label">Função</label><input v-model="form.funcao" class="form-input" /></div>
-            <div class="form-field"><label class="form-label">Telefone</label><input v-model="form.telefone" class="form-input" /></div>
-          </div>
-          <div class="form-field"><label class="form-label">Data Nascimento</label><input v-model="form.data_nascimento" type="date" class="form-input" /></div>
-          <div v-if="!form.idfuncionario" class="form-field">
-            <label class="form-label">Senha *</label>
-            <input v-model="form.password" type="password" minlength="6" class="form-input" />
-          </div>
-          <p v-if="erroModal" class="form-error">⚠ {{ erroModal }}</p>
         </div>
-        <div class="modal-footer">
-          <button class="btn-ghost" @click="modal = false">Cancelar</button>
-          <button class="btn-primary" @click="salvar" :disabled="salvando">{{ salvando ? 'Salvando…' : 'Salvar' }}</button>
-        </div>
-      </div>
+      </main>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { supabase } from '@/composables/useSupabase.js'
+import MenuNav from '@/components/menu.vue'
+import Sidebar from '@/components/sidebar.vue'
+import { useFuncionarios } from '@/composables/useSupabase.js'
 
-const { registrarFuncionario } = useSupabase()
-const lista   = ref([])
-const loading = ref(true)
-const busca   = ref('')
-const modal   = ref(false)
-const salvando = ref(false)
-const erroModal = ref('')
+const { funcionarios, loading, listarFuncionarios, criarFuncionario, atualizarFuncionario, deletarFuncionario } = useFuncionarios()
 
-const formVazio = () => ({
-  idfuncionario: null, nome: '', sobrenome: '', cpf: '',
-  email: '', funcao: '', telefone: '', data_nascimento: '', status: 'ativo', password: ''
-})
-const form = ref(formVazio())
+const busca       = ref('')
+const modalAberto = ref(false)
+const editando    = ref(null)
+const salvando    = ref(false)
+const erro        = ref('')
 
-const listaFiltrada = computed(() => {
+const form = ref({ nome: '', matricula: '', cargo: '', setor: '', contato: '' })
+
+const funcionariosFiltrados = computed(() => {
   const q = busca.value.toLowerCase()
-  return lista.value.filter(f =>
-    (f.nome + ' ' + f.sobrenome).toLowerCase().includes(q) ||
-    f.cpf?.includes(q) || f.funcao?.toLowerCase().includes(q)
+  if (!q) return funcionarios.value
+  return funcionarios.value.filter(f =>
+    f.nome?.toLowerCase().includes(q) ||
+    f.cargo?.toLowerCase().includes(q) ||
+    f.setor?.toLowerCase().includes(q) ||
+    f.matricula?.toLowerCase().includes(q)
   )
 })
 
-onMounted(carregar)
+const setoresUnicos = computed(() =>
+  [...new Set(funcionarios.value.map(f => f.setor).filter(Boolean))]
+)
 
-async function carregar() {
-  loading.value = true
-  const { data } = await supabase.from('funcionario').select('*').order('nome')
-  lista.value = data ?? []
-  loading.value = false
+function iniciais(nome) {
+  if (!nome) return '?'
+  return nome.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase()
 }
 
 function abrirModal(f = null) {
-  erroModal.value = ''
+  editando.value = f
+  erro.value     = ''
   form.value = f
-    ? { ...f, data_nascimento: f.data_nascimento?.slice(0, 10) ?? '', password: '' }
-    : formVazio()
-  modal.value = true
+    ? { nome: f.nome, matricula: f.matricula || '', cargo: f.cargo || '', setor: f.setor || '', contato: f.contato || '' }
+    : { nome: '', matricula: '', cargo: '', setor: '', contato: '' }
+  modalAberto.value = true
 }
+
+function fecharModal() { modalAberto.value = false; editando.value = null }
 
 async function salvar() {
-  if (!form.value.nome || !form.value.cpf || !form.value.email) {
-    erroModal.value = 'Nome, CPF e e-mail são obrigatórios.'
-    return
-  }
+  erro.value = ''
+  if (!form.value.nome.trim()) { erro.value = 'O nome é obrigatório.'; return }
   salvando.value = true
-  erroModal.value = ''
-
-  if (!form.value.idfuncionario) {
-    const res = await registrarFuncionario({
-      nome: form.value.nome, sobrenome: form.value.sobrenome,
-      cpf: form.value.cpf, email: form.value.email,
-      funcao: form.value.funcao, telefone: form.value.telefone,
-      password: form.value.password,
-    })
-    if (!res.ok) { erroModal.value = res.message; salvando.value = false; return }
-  } else {
-    const { error } = await supabase.from('funcionario').update({
-      nome: form.value.nome, sobrenome: form.value.sobrenome,
-      cpf: form.value.cpf, funcao: form.value.funcao,
-      telefone: form.value.telefone,
-      data_nascimento: form.value.data_nascimento || null,
-    }).eq('idfuncionario', form.value.idfuncionario)
-    if (error) { erroModal.value = error.message; salvando.value = false; return }
-  }
-
-  salvando.value = false
-  modal.value = false
-  await carregar()
+  try {
+    if (editando.value) await atualizarFuncionario(editando.value.idfuncionario, form.value)
+    else await criarFuncionario(form.value)
+    fecharModal()
+    await listarFuncionarios()
+  } catch (e) {
+    erro.value = e.message?.includes('funcionarios_matricula_key')
+      ? 'Matrícula já cadastrada.'
+      : (e.message || 'Erro ao salvar.')
+  } finally { salvando.value = false }
 }
 
-async function toggleStatus(f) {
-  const novoStatus = f.status === 'ativo' ? 'inativo' : 'ativo'
-  await supabase.from('funcionario').update({ status: novoStatus }).eq('idfuncionario', f.idfuncionario)
-  await carregar()
+async function excluir(id) {
+  if (!confirm('Deseja excluir este funcionário?')) return
+  try { await deletarFuncionario(id); await listarFuncionarios() }
+  catch { alert('Não foi possível excluir. Pode ter locações vinculadas.') }
 }
+
+onMounted(() => listarFuncionarios())
 </script>
 
 <style scoped>
-.page { padding: 28px 32px; max-width: 1100px; margin: 0 auto; }
-.page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
-.page-title { font-size: 1.6rem; font-weight: 800; color: #1a3a6b; margin: 0 0 4px; }
-.page-sub { font-size: 0.85rem; color: #6b82a0; margin: 0; }
-
-.search-bar { display: flex; align-items: center; gap: 10px; background: #ffffff; border: 1.5px solid #dbeafe; border-radius: 10px; padding: 10px 16px; margin-bottom: 20px; }
-.search-icon { font-size: 1rem; }
-.search-input { flex: 1; border: none; outline: none; background: transparent; font-size: 0.9rem; color: #1a3a6b; }
-.search-input::placeholder { color: #a0b4c8; }
-
-.loading-state { display: flex; flex-direction: column; align-items: center; padding: 64px 0; gap: 14px; color: #6b82a0; font-size: 0.9rem; }
-.spinner { width: 32px; height: 32px; border: 3px solid #dbeafe; border-top-color: #1a3a6b; border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.table-card { background: #ffffff; border: 1.5px solid #dbeafe; border-radius: 12px; overflow: hidden; }
-.table-wrap { overflow-x: auto; }
-
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th { color: #6b82a0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 14px 20px; text-align: left; background: #f8faff; border-bottom: 1px solid #dbeafe; }
-.th-right { text-align: right; }
-.data-table td { padding: 14px 20px; font-size: 0.875rem; color: #2d4a6e; border-bottom: 1px solid #f0f4fb; }
-.data-table tr:last-child td { border-bottom: none; }
-.data-table tr:hover td { background: #f8faff; }
-
-.td-name { font-weight: 700; color: #1a3a6b !important; }
-.td-mono { font-family: monospace; font-size: 0.82rem !important; }
-.td-actions { text-align: right; }
-
-.icon-btn { background: none; border: none; cursor: pointer; padding: 6px 8px; border-radius: 6px; font-size: 1rem; transition: background 0.15s; margin-left: 2px; }
-.icon-btn:hover { background: #f0f4fb; }
-.delete-btn:hover { background: #fef3c7 !important; }
-
-.status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.73rem; font-weight: 700; text-transform: capitalize; }
-.status-ativo   { background: #dcfce7; color: #166534; }
-.status-inativo { background: #fee2e2; color: #991b1b; }
-
-.btn-primary { background: #1a3a6b; color: #ffffff; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
-.btn-primary:hover:not(:disabled) { background: #245096; }
-.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-.btn-ghost { background: transparent; color: #6b82a0; border: 1.5px solid #dbeafe; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
-.btn-ghost:hover { background: #f0f4fb; }
-
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
-.modal { background: #ffffff; border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; border: 1.5px solid #dbeafe; box-shadow: 0 20px 60px rgba(26,58,107,0.2); }
-.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid #f0f4fb; }
-.modal-title { font-size: 1.1rem; font-weight: 800; color: #1a3a6b; margin: 0; }
-.modal-close { background: none; border: none; font-size: 1rem; color: #6b82a0; cursor: pointer; padding: 4px; }
-.modal-close:hover { color: #1a3a6b; }
-.modal-body { padding: 24px; }
-.modal-footer { display: flex; gap: 12px; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid #f0f4fb; }
-
-.form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.form-field { margin-bottom: 14px; }
-.form-label { display: block; font-size: 0.72rem; font-weight: 700; color: #5a7a9e; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
-.form-input { width: 100%; background: #f8faff; border: 1.5px solid #dbeafe; border-radius: 8px; padding: 10px 14px; color: #1a3a6b; font-size: 0.9rem; box-sizing: border-box; outline: none; transition: border-color 0.2s; }
-.form-input:focus { border-color: #1a3a6b; }
-.form-input::placeholder { color: #a0b4c8; }
-.form-error { color: #c0392b; font-size: 0.82rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px 12px; }
-
-@media (max-width: 640px) { .page { padding: 20px 16px; } }
+.app-layout { display: flex; flex-direction: row; }
+.funcionarios-page { padding: 28px 32px; max-width: 1050px; font-family: 'Segoe UI', sans-serif; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.header-left { display: flex; align-items: center; gap: 14px; }
+.header-icon { font-size: 26px; }
+h1 { font-size: 22px; font-weight: 700; color: #1e293b; margin: 0; }
+.subtitle { font-size: 13px; color: #94a3b8; margin: 2px 0 0; }
+.stats-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 20px; }
+.stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.stat-icon-box { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.stat-value { font-size: 22px; font-weight: 700; color: #1e293b; }
+.stat-label { font-size: 12px; color: #94a3b8; }
+.card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.card-header { padding: 14px 20px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.card-count { font-size: 12px; font-weight: 600; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 3px 10px; border-radius: 20px; }
+.search-wrap { position: relative; flex: 1; max-width: 360px; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; pointer-events: none; }
+.input-busca { width: 100%; padding: 8px 12px 8px 32px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #1e293b; outline: none; box-sizing: border-box; }
+.input-busca:focus { border-color: #1e3a5f; background: #fff; }
+.estado-vazio { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px 20px; color: #94a3b8; font-size: 14px; }
+.empty-icon { font-size: 32px; opacity: 0.4; }
+.spinner { width: 30px; height: 30px; border: 3px solid #e2e8f0; border-top-color: #1e3a5f; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg) } }
+.tabela-wrapper { overflow-x: auto; }
+.tabela { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabela thead { background: #f8fafc; }
+.tabela th { text-align: left; padding: 11px 18px; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #e2e8f0; }
+.tabela td { padding: 13px 18px; color: #374151; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.tabela tr:last-child td { border-bottom: none; }
+.tabela tbody tr:hover { background: #f8fafc; }
+.avatar-nome { display: flex; align-items: center; gap: 10px; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #1e3a5f, #2d6bc4); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.nome-text { font-size: 13px; font-weight: 600; color: #1e293b; }
+.mono { font-family: 'Courier New', monospace; font-size: 12px; color: #64748b; }
+.badge-setor { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+.acoes { display: flex; gap: 6px; }
+.btn-acao { padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; transition: all 0.15s; font-family: inherit; }
+.btn-acao.editar { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.btn-acao.editar:hover { background: #dbeafe; }
+.btn-acao.excluir { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.btn-acao.excluir:hover { background: #fee2e2; }
+.btn-primary { background: #1e3a5f; color: #fff; border: none; padding: 9px 18px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; white-space: nowrap; }
+.btn-primary:hover { background: #163050; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.3); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: #fff; border-radius: 16px; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); border: 1px solid #e2e8f0; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #f1f5f9; }
+.modal-header h2 { font-size: 15px; font-weight: 700; color: #1e293b; margin: 0; }
+.btn-fechar { width: 28px; height: 28px; border-radius: 7px; border: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.btn-fechar:hover { background: #f1f5f9; color: #1e293b; }
+.modal-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+.campo { display: flex; flex-direction: column; gap: 5px; }
+.campo label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+.campo input, .campo select { padding: 10px 12px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #1e293b; outline: none; font-family: inherit; }
+.campo input:focus, .campo select:focus { border-color: #1e3a5f; background: #fff; }
+.campo input::placeholder { color: #94a3b8; }
+.msg-erro { font-size: 12px; color: #dc2626; margin: 0; background: #fef2f2; border: 1px solid #fecaca; padding: 8px 12px; border-radius: 7px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #f1f5f9; }
+.btn-cancelar { background: #fff; border: 1.5px solid #e2e8f0; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; font-family: inherit; }
+.btn-cancelar:hover { border-color: #cbd5e1; }
+@media (max-width: 768px) { .funcionarios-page { padding: 16px; } .stats-row { grid-template-columns: 1fr 1fr; } }
 </style>

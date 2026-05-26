@@ -44,7 +44,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="aluno in alunosFiltrados" :key="aluno.id">
+            <tr v-for="aluno in alunosFiltrados" :key="aluno.idaluno">
               <td class="td-name">{{ aluno.nome }}</td>
               <td class="td-mono">{{ formatarCPF(aluno.cpf) }}</td>
               <td>{{ aluno.email }}</td>
@@ -137,7 +137,7 @@ const abrirModalCadastro = () => {
 
 const abrirModalEdicao = (aluno) => {
   editando.value = true
-  alunoIdEdicao.value = aluno.id
+  alunoIdEdicao.value = aluno.idaluno
   form.value = { nome: aluno.nome, cpf: aluno.cpf, email: aluno.email }
   modalAberto.value = true
 }
@@ -152,7 +152,7 @@ const salvarAluno = async () => {
     const dadosAluno = { nome: form.value.nome, cpf: cpfLimpo, email: form.value.email }
 
     if (editando.value) {
-      const { error } = await supabase.from('aluno').update(dadosAluno).eq('id', alunoIdEdicao.value)
+      const { error } = await supabase.from('aluno').update(dadosAluno).eq('idaluno', alunoIdEdicao.value)
       if (error) throw error
       alert('Aluno atualizado com sucesso!')
     } else {
@@ -173,7 +173,7 @@ const salvarAluno = async () => {
 const eliminarAluno = async (id, nome) => {
   if (!confirm(`Eliminar o aluno "${nome}"? Esta ação não pode ser desfeita.`)) return
   try {
-    const { error } = await supabase.from('aluno').delete().eq('id', id)
+    const { error } = await supabase.from('aluno').delete().eq('idaluno', id)
     if (error) throw error
     await buscarAlunos()
   } catch (error) {

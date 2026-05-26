@@ -88,7 +88,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { supabase } from '@/composables/useSupabase.js'
+import { supabase, useAlunos, useFuncionarios, useEpis } from '@/composables/useSupabase.js'
 
 const aba     = ref('aluno')
 const lista   = ref([])
@@ -97,8 +97,9 @@ const modal   = ref(false)
 const salvando = ref(false)
 const erroModal = ref('')
 
-const alunos       = ref([])
-const funcionarios = ref([])
+const { alunos, listarAlunos } = useAlunos()
+const { funcionarios, listarFuncionarios } = useFuncionarios()
+const { epis: episDisponiveisRef, listarEpis } = useEpis()
 const episDisponiveis = ref([])
 
 const form = ref({ tipo: 'aluno', pessoa_id: '', epi_id: '', data_entrega: hoje() })
@@ -139,14 +140,15 @@ async function carregar() {
 }
 
 async function carregarSelects() {
-  const [{ data: al }, { data: fu }, { data: ep }] = await Promise.all([
-    supabase.from('aluno').select('idaluno,nome,sobrenome').order('nome'),
-    supabase.from('funcionario').select('idfuncionario,nome,sobrenome').eq('status', 'ativo').order('nome'),
-    supabase.from('epi').select('idepi,nome,quantidade').eq('disponivel', true).eq('ativo', true),
+  await Promise.all([
+    listarAlunos(),
+    listarFuncionarios(),
+    listarEpis(),
   ])
-  alunos.value       = al ?? []
-  funcionarios.value = fu ?? []
-  episDisponiveis.value = ep ?? []
+  // copy refs to local arrays expected by the template
+  alunos.value = alunos.value ?? []
+  funcionarios.value = funcionarios.value ?? []
+  episDisponiveis.value = (episDisponiveisRef.value ?? []).filter(e => e.disponivel && e.ativo)
 }
 
 function abrirModal() {
@@ -164,19 +166,23 @@ async function salvar() {
   erroModal.value = ''
   let erro
   if (form.value.tipo === 'aluno') {
-    const { error } = await supabase.from('aluno_has_epi').insert({
-      aluno_id: form.value.pessoa_id,
-      epi_id:   form.value.epi_id,
-      data_entrega: form.value.data_entrega || null,
-    })
-    erro = error
+    try {
+      const { error } = await supabase.from('aluno_has_epi').insert({
+        aluno_id: form.value.pessoa_id,
+        epi_id:   form.value.epi_id,
+        data_entrega: form.value.data_entrega || null,
+      })
+      erro = error
+    } catch (e) { erro = e }
   } else {
-    const { error } = await supabase.from('funcionario_has_epi').insert({
-      funcionario_id: form.value.pessoa_id,
-      epi_id:         form.value.epi_id,
-      data_entrega:   form.value.data_entrega || null,
-    })
-    erro = error
+    try {
+      const { error } = await supabase.from('funcionario_has_epi').insert({
+        funcionario_id: form.value.pessoa_id,
+        epi_id:         form.value.epi_id,
+        data_entrega:   form.value.data_entrega || null,
+      })
+      erro = error
+    } catch (e) { erro = e }
   }
   salvando.value = false
   if (erro) { erroModal.value = erro.message; return }

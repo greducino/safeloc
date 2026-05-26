@@ -1,589 +1,332 @@
 <template>
-  <div class="page">
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">EPIs</h2>
-        <p class="page-sub">Catálogo de Equipamentos de Proteção Individual</p>
-      </div>
-      <button v-if="isFuncionario" class="btn-primary" @click="abrirModal()">
-        + Novo EPI
-      </button>
-    </div>
-
-    <!-- Search -->
-    <div class="search-bar">
-      <span class="search-icon">🔍</span>
-      <input v-model="busca" class="search-input" placeholder="Buscar EPI por nome ou tipo…" />
-    </div>
-
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Carregando EPIs…</p>
-    </div>
-
-    <div v-else-if="episFiltrados.length === 0" class="empty-state">
-      <span class="empty-icon">🦺</span>
-      <p>Nenhum EPI encontrado.</p>
-    </div>
-
-    <div v-else class="epi-grid">
-      <div v-for="epi in episFiltrados" :key="epi.idepi" class="epi-card">
-        <div class="epi-card-top">
-          <div class="epi-title-row">
-            <h3 class="epi-nome">{{ epi.nome }}</h3>
-            <span :class="['epi-badge', epi.disponivel ? 'badge-ok' : 'badge-off']">
-              {{ epi.disponivel ? 'Disponível' : 'Indisponível' }}
-            </span>
-          </div>
-          <p class="epi-tipo">{{ epi.tipo }}</p>
+  <div>
+    <MenuNav />
+    <div class="app-layout">
+      <Sidebar />
+      <main class="main-content">
+        <div class="page-header">
+          <h1>🦺 Gestão de EPIs</h1>
+          <button class="btn btn-primary" @click="abrirModal()">+ Novo EPI</button>
         </div>
 
-        <p class="epi-desc">{{ epi.descricao || 'Sem descrição.' }}</p>
+        <div class="filters card">
+          <input v-model="busca" type="text" placeholder="🔍 Buscar por nome..." class="filter-input" @input="filtrar" />
+          <select v-model="filtroCategoria" @change="filtrar" class="filter-input">
+            <option value="">Todas as categorias (Tipos)</option>
+            <option v-for="cat in categorias" :key="cat" :value="cat">{{ cat }}</option>
+          </select>
+          </div>
 
-        <div class="epi-footer">
-          <div class="epi-meta">
-            <span class="meta-item">
-              <span class="meta-label">Qtd</span>
-              <span class="meta-val">{{ epi.quantidade }}</span>
-            </span>
-            <span v-if="epi.data_validade" class="meta-item">
-              <span class="meta-label">Validade</span>
-              <span class="meta-val">{{ fmtDate(epi.data_validade) }}</span>
-            </span>
-          </div>
-          <div class="epi-actions">
-            <button v-if="isFuncionario" class="btn-sm btn-edit" @click="abrirModal(epi)">Editar</button>
-            <button
-              v-if="isAluno"
-              class="btn-sm btn-solicitar"
-              :disabled="!epi.disponivel"
-              @click="solicitar(epi)"
-            >
-              {{ epi.disponivel ? 'Solicitar' : 'Esgotado' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        <div v-if="loading" class="loading">Carregando EPIs...</div>
+        <div v-else-if="epis.length === 0" class="empty-state card">Nenhum EPI encontrado.</div>
 
-    <!-- Modal -->
-    <div v-if="modal" class="overlay" @click.self="modal = false">
-      <div class="modal">
-        <div class="modal-header">
-          <h3 class="modal-title">{{ form.idepi ? 'Editar EPI' : 'Novo EPI' }}</h3>
-          <button class="modal-close" @click="modal = false">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-field">
-            <label class="form-label">Nome *</label>
-            <input v-model="form.nome" required class="form-input" placeholder="Ex: Capacete de Segurança" />
-          </div>
-          <div class="form-field">
-            <label class="form-label">Tipo</label>
-            <input v-model="form.tipo" class="form-input" placeholder="Ex: Proteção da Cabeça" />
-          </div>
-          <div class="form-row2">
-            <div class="form-field">
-              <label class="form-label">Quantidade</label>
-              <input v-model.number="form.quantidade" type="number" min="0" class="form-input" />
+        <div v-else class="epis-grid">
+          <div v-for="epi in epis" :key="epi.idepi" class="epi-card">
+            <div class="epi-img-wrap">
+              <img v-if="epi.foto" :src="epi.foto" :alt="epi.nome" />
+              <div v-else class="epi-placeholder">🦺</div>
+              <span class="epi-status" :class="epi.disponivel ? 'available' : 'unavailable'">
+                {{ epi.disponivel ? 'Disponível' : 'Indisponível' }}
+              </span>
             </div>
-            <div class="form-field">
-              <label class="form-label">Validade</label>
-              <input v-model="form.data_validade" type="date" class="form-input" />
+            <div class="epi-info">
+              <h3>{{ epi.nome }}</h3>
+              <p class="epi-cat">{{ epi.tipo }}</p>
+              <p class="epi-desc">{{ epi.descricao }}</p>
+              <p class="epi-qty">Quantidade Total: <strong>{{ epi.quantidade }}</strong></p>
+              <p v-if="epi.codigo_patrimonio" class="epi-ca">Cód. Patrimônio: {{ epi.codigo_patrimonio }}</p>
+              <p v-if="epi.data_validade" class="epi-validade" :class="isVencido(epi.data_validade) ? 'vencido' : 'vigente'">
+                📅 Validade: {{ formatarData(epi.data_validade) }}
+              </p>
+              
+              <div class="epi-actions">
+                <button class="btn btn-dark btn-sm" @click="abrirModal(epi)">✏️ Editar</button>
+                <button class="btn btn-danger btn-sm" @click="confirmarDelete(epi)">🗑️</button>
+              </div>
             </div>
           </div>
-          <div class="form-field">
-            <label class="form-label">Código Patrimônio</label>
-            <input v-model="form.codigo_patrimonio" class="form-input" placeholder="Ex: PAT-001" />
-          </div>
-          <div class="form-field">
-            <label class="form-label">Descrição</label>
-            <textarea v-model="form.descricao" rows="3" class="form-input form-textarea" placeholder="Descrição do equipamento…"></textarea>
-          </div>
-          <div class="form-checks">
-            <label class="check-label">
-              <input type="checkbox" v-model="form.disponivel" class="check-input" />
-              <span>Disponível</span>
-            </label>
-            <label class="check-label">
-              <input type="checkbox" v-model="form.ativo" class="check-input" />
-              <span>Ativo</span>
-            </label>
-          </div>
-          <p v-if="erroModal" class="form-error">⚠ {{ erroModal }}</p>
         </div>
-        <div class="modal-footer">
-          <button class="btn-ghost" @click="modal = false">Cancelar</button>
-          <button class="btn-primary" @click="salvar" :disabled="salvando">
-            {{ salvando ? 'Salvando…' : 'Salvar EPI' }}
-          </button>
+
+        <div v-if="modalAberto" class="modal-overlay" @click.self="modalAberto = false">
+          <div class="modal">
+            <div class="modal-header">
+              <h2>{{ editando ? 'Editar EPI' : 'Novo EPI' }}</h2>
+              <button class="modal-close" @click="modalAberto = false">✕</button>
+            </div>
+            <div v-if="erroModal" class="alert alert-error">{{ erroModal }}</div>
+            
+            <form @submit.prevent="salvarEpi">
+              <div class="form-group">
+                <label>Nome do EPI *</label>
+                <input v-model="form.nome" required placeholder="Ex: Capacete de Segurança" />
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Tipo (Categoria) *</label>
+                  <select v-model="form.tipo" required>
+                    <option v-for="cat in categorias" :key="cat" :value="cat">{{ cat }}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Cód. Patrimônio / CA</label>
+                  <input v-model="form.codigo_patrimonio" placeholder="Ex: 12345" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Descrição</label>
+                <textarea v-model="form.descricao" rows="3" placeholder="Descreva o equipamento..."></textarea>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Quantidade</label>
+                  <input v-model.number="form.quantidade" type="number" min="0" required />
+                </div>
+                <div class="form-group">
+                  <label>Ativo no Sistema?</label>
+                  <select v-model="form.ativo">
+                    <option :value="true">Sim</option>
+                    <option :value="false">Não</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Imagem do EPI</label>
+                <div class="img-upload-wrap">
+                  <img v-if="previewImg" :src="previewImg" class="img-preview" />
+                  <label class="upload-btn">
+                    📷 {{ previewImg ? 'Trocar imagem' : 'Escolher imagem' }}
+                    <input type="file" accept="image/*" @change="onFileChange" hidden />
+                  </label>
+                </div>
+              </div>
+              
+              <div class="modal-actions">
+                <button type="button" class="btn btn-outline-dark" @click="modalAberto = false">Cancelar</button>
+                <button type="submit" class="btn btn-primary" :disabled="salvando">
+                  {{ salvando ? 'Salvando...' : 'Salvar' }}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+
+        <div v-if="deleteModal" class="modal-overlay" @click.self="deleteModal = false">
+          <div class="modal" style="max-width:380px">
+            <h2 style="color:var(--danger); margin-bottom:12px">⚠️ Confirmar exclusão</h2>
+            <p>Tem certeza que deseja excluir <strong>{{ epiParaDeletar?.nome }}</strong>?</p>
+            <div class="modal-actions" style="margin-top:20px">
+              <button class="btn btn-outline-dark" @click="deleteModal = false">Cancelar</button>
+              <button class="btn btn-danger" @click="deletarEpiConfirm" :disabled="salvando">Excluir</button>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { supabase } from '@/composables/useSupabase.js'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import MenuNav from '@/components/menu.vue'
+import Sidebar from '@/components/sidebar.vue'
+// Importa o composable que você criou
+import { useEpis, uploadImagemEpi, useAuth } from '@/composables/useSupabase.js'
 
-const { isFuncionario, isAluno, profile } = useAuth()
-const epis    = ref([])
-const loading = ref(true)
-const busca   = ref('')
-const modal   = ref(false)
+const route = useRoute()
+const { epis, loading, listarEpis, criarEpi, atualizarEpi, deletarEpi } = useEpis()
+const { getCurrentUser } = useAuth()
+
+const categorias = ['Capacete', 'Luvas', 'Respirador', 'Óculos de Proteção', 'Bota de Segurança', 'Proteção Auricular', 'Cinto de Segurança', 'Protetor Facial', 'Outros']
+
+const busca = ref('')
+const filtroCategoria = ref(route.query.categoria || '')
+
+const modalAberto = ref(false)
+const editando = ref(null)
 const salvando = ref(false)
 const erroModal = ref('')
+const deleteModal = ref(false)
+const epiParaDeletar = ref(null)
 
-const formVazio = () => ({
-  idepi: null, nome: '', tipo: '', quantidade: 0,
-  disponivel: true, ativo: true, data_validade: '',
-  codigo_patrimonio: '', descricao: '', foto: ''
+const arquivoImagem = ref(null)
+const previewImg = ref('')
+
+// Objeto alinhado EXATAMENTE com as colunas do seu DB
+const form = ref({
+  nome: '',
+  tipo: 'Capacete',
+  descricao: '',
+  codigo_patrimonio: '',
+  data_validade: '',
+  quantidade: 1,
+  ativo: true,
+  foto: ''
 })
-const form = ref(formVazio())
 
-const episFiltrados = computed(() => {
-  const q = busca.value.toLowerCase()
-  return epis.value.filter(e =>
-    e.nome?.toLowerCase().includes(q) || e.tipo?.toLowerCase().includes(q)
-  )
+onMounted(async () => {
+  try {
+    await getCurrentUser()
+  } catch (err) {
+    console.warn('Falha ao carregar o perfil:', err.message)
+  }
+  filtrar()
 })
 
-onMounted(carregar)
+function filtrar() {
+  // O seu listarEpis aceita um objeto { busca, tipo }
+  listarEpis({
+    busca: busca.value,
+    tipo: filtroCategoria.value || undefined
+  })
+}
 
-async function carregar() {
-  loading.value = true
-  const { data } = await supabase.from('epi').select('*').eq('ativo', true).order('nome')
-  epis.value = data ?? []
-  loading.value = false
+function onFileChange(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  arquivoImagem.value = file
+  previewImg.value = URL.createObjectURL(file)
+}
+
+function formatarData(data) {
+  if (!data) return '—'
+  const d = new Date(data)
+  return d.toLocaleDateString('pt-BR')
+}
+
+function isVencido(data) {
+  if (!data) return false
+  return new Date(data) < new Date()
 }
 
 function abrirModal(epi = null) {
+  editando.value = epi
   erroModal.value = ''
-  form.value = epi
-    ? { ...epi, data_validade: epi.data_validade?.slice(0, 10) ?? '' }
-    : formVazio()
-  modal.value = true
+  arquivoImagem.value = null
+
+  if (epi) {
+    // Preenche o form com os dados do banco
+    form.value = {
+      nome: epi.nome,
+      tipo: epi.tipo,
+      descricao: epi.descricao || '',
+      codigo_patrimonio: epi.codigo_patrimonio || '',
+      data_validade: epi.data_validade || '',
+      quantidade: epi.quantidade ?? 0,
+      ativo: epi.ativo ?? true,
+      foto: epi.foto || ''
+    }
+    previewImg.value = epi.foto || ''
+  } else {
+    // Reseta o form para um novo cadastro
+    form.value = { 
+      nome: '', 
+      tipo: 'Capacete', 
+      descricao: '', 
+      codigo_patrimonio: '',
+      data_validade: '',
+      quantidade: 1, 
+      ativo: true, 
+      foto: '' 
+    }
+    previewImg.value = ''
+  }
+  modalAberto.value = true
 }
 
-async function salvar() {
-  if (!form.value.nome.trim()) { erroModal.value = 'Nome obrigatório'; return }
+async function salvarEpi() {
   salvando.value = true
   erroModal.value = ''
-  const payload = {
-    nome: form.value.nome, tipo: form.value.tipo,
-    quantidade: form.value.quantidade, disponivel: form.value.disponivel,
-    ativo: form.value.ativo, descricao: form.value.descricao,
-    codigo_patrimonio: form.value.codigo_patrimonio || null,
-    data_validade: form.value.data_validade || null,
+
+  try {
+    if (arquivoImagem.value) {
+      form.value.foto = await uploadImagemEpi(arquivoImagem.value)
+    }
+
+    const dadosParaSalvar = { ...form.value }
+    if (dadosParaSalvar.data_validade === '') {
+      dadosParaSalvar.data_validade = null 
+    }
+    if (editando.value) {
+      await atualizarEpi(editando.value.idepi, dadosParaSalvar)
+    } else {
+      await criarEpi(dadosParaSalvar)
+    }
+
+    modalAberto.value = false
+    filtrar()
+  } catch (e) {
+    erroModal.value = e.message || 'Erro ao salvar EPI'
+  } finally {
+    salvando.value = false
   }
-  let erro
-  if (form.value.idepi) {
-    const res = await supabase.from('epi').update(payload).eq('idepi', form.value.idepi)
-    erro = res.error
-  } else {
-    const res = await supabase.from('epi').insert(payload)
-    erro = res.error
-  }
-  salvando.value = false
-  if (erro) { erroModal.value = erro.message; return }
-  modal.value = false
-  await carregar()
 }
 
-async function solicitar(epi) {
-  if (!profile.value?.idaluno) return alert('Perfil de aluno não encontrado.')
-  const { error } = await supabase.from('solicitacoes').insert({
-    aluno_id: profile.value.idaluno,
-    epi_id: epi.idepi,
-    status: 'pendente',
-  })
-  if (error) { alert('Erro: ' + error.message); return }
-  alert('Solicitação enviada com sucesso!')
+function confirmarDelete(epi) {
+  epiParaDeletar.value = epi
+  deleteModal.value = true
 }
 
-function fmtDate(d) {
-  if (!d) return '–'
-  return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
+async function deletarEpiConfirm() {
+  salvando.value = true
+  try {
+    // Passa o ID correto para a função do seu composable
+    await deletarEpi(epiParaDeletar.value.idepi)
+    deleteModal.value = false
+    filtrar() // Recarrega a lista
+  } catch (e) {
+    alert('Erro ao excluir: ' + e.message)
+  } finally {
+    salvando.value = false
+  }
 }
 </script>
 
 <style scoped>
-.page {
-  padding: 28px 32px;
-  max-width: 1100px;
-  margin: 0 auto;
-}
+.app-layout { display: flex; flex-direction: row; } 
+.filters { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; padding: 16px; }
+.filter-input { padding: 9px 12px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-size: 0.88rem; flex: 1; min-width: 160px; }
+.epis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+.epi-card { background: var(--white); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; transition: box-shadow 0.2s; }
+.epi-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.epi-img-wrap { position: relative; height: 160px; background: #f3f4f6; }
+.epi-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.epi-placeholder { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+.epi-status { position: absolute; top: 10px; right: 10px; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+.epi-status.available { background: #dcfce7; color: #166534; }
+.epi-status.unavailable { background: #fee2e2; color: #991b1b; }
+.epi-info { padding: 16px; }
+.epi-info h3 { font-size: 1rem; color: #1f2937; margin-bottom: 4px; }
+.epi-cat { font-size: 0.78rem; color: #4f46e5; font-weight: 600; margin-bottom: 6px; }
+.epi-desc { font-size: 0.82rem; color: #4b5563; margin-bottom: 8px; line-height: 1.5; }
+.epi-qty { font-size: 0.82rem; color: #4b5563; margin-bottom: 4px; }
+.epi-ca { font-size: 0.78rem; color: #6b7280; margin-bottom: 8px; }
+.epi-validade { font-size: 0.78rem; margin-bottom: 12px; font-weight: 600; }
+.epi-validade.vigente { color: #059669; }
+.epi-validade.vencido { color: #dc2626; font-weight: 700; }
+.epi-actions { display: flex; gap: 8px; }
+.empty-state { text-align: center; padding: 40px; color: #9ca3af; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.88rem; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.btn-outline-dark { background: none; border: 1.5px solid #d1d5db; color: #4b5563; padding: 8px 16px; border-radius: 6px; cursor: pointer;}
+.btn-outline-dark:hover { background: #f3f4f6; }
+.btn-primary { background: #4f46e5; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+.btn-danger { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+.img-upload-wrap { display: flex; flex-direction: column; gap: 8px; }
+.img-preview { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; border: 1.5px solid #d1d5db; }
+.upload-btn { display: inline-block; cursor: pointer; padding: 9px 16px; background: #f3f4f6; border: 1.5px dashed #9ca3af; border-radius: 8px; font-size: 0.88rem; font-weight: 600; color: #4b5563; text-align: center; }
+.upload-btn:hover { background: #e5e7eb; }
 
-.page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.page-title {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: #1a3a6b;
-  margin: 0 0 4px;
-}
-
-.page-sub {
-  font-size: 0.85rem;
-  color: #6b82a0;
-  margin: 0;
-}
-
-/* Search */
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #ffffff;
-  border: 1.5px solid #dbeafe;
-  border-radius: 10px;
-  padding: 10px 16px;
-  margin-bottom: 24px;
-  max-width: 420px;
-}
-
-.search-icon {
-  font-size: 1rem;
-  flex-shrink: 0;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 0.9rem;
-  color: #1a3a6b;
-}
-
-.search-input::placeholder {
-  color: #a0b4c8;
-}
-
-/* Loading / Empty */
-.loading-state, .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 0;
-  gap: 16px;
-  color: #6b82a0;
-}
-
-.spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid #dbeafe;
-  border-top-color: #1a3a6b;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.empty-icon { font-size: 3rem; }
-
-/* EPI Grid */
-.epi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.epi-card {
-  background: #ffffff;
-  border: 1.5px solid #dbeafe;
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  transition: box-shadow 0.2s, transform 0.2s;
-}
-
-.epi-card:hover {
-  box-shadow: 0 6px 20px rgba(26, 58, 107, 0.1);
-  transform: translateY(-2px);
-}
-
-.epi-title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.epi-nome {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #1a3a6b;
-  margin: 0;
-  flex: 1;
-}
-
-.epi-badge {
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.badge-ok  { background: #dcfce7; color: #166534; }
-.badge-off { background: #fee2e2; color: #991b1b; }
-
-.epi-tipo {
-  font-size: 0.8rem;
-  color: #6b82a0;
-  margin: 0;
-  font-weight: 500;
-}
-
-.epi-desc {
-  font-size: 0.82rem;
-  color: #8fa3bc;
-  line-height: 1.6;
-  flex: 1;
-  margin: 0;
-}
-
-.epi-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #f0f4fb;
-}
-
-.epi-meta {
-  display: flex;
-  gap: 16px;
-}
-
-.meta-item {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.meta-label {
-  font-size: 0.68rem;
-  color: #a0b4c8;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.meta-val {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #1a3a6b;
-}
-
-.epi-actions {
-  display: flex;
-  gap: 6px;
-}
-
-/* Buttons */
-.btn-primary {
-  background: #1a3a6b;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-primary:hover {
-  background: #245096;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-ghost {
-  background: transparent;
-  color: #6b82a0;
-  border: 1.5px solid #dbeafe;
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-ghost:hover {
-  background: #f0f4fb;
-}
-
-.btn-sm {
-  padding: 6px 14px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-size: 0.78rem;
-  font-weight: 700;
-  transition: opacity 0.2s;
-}
-
-.btn-sm:hover:not(:disabled) { opacity: 0.8; }
-.btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.btn-edit      { background: #dbeafe; color: #1a3a6b; }
-.btn-solicitar { background: #1a3a6b; color: #ffffff; }
-
-/* Modal */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-  padding: 16px;
-}
-
-.modal {
-  background: #ffffff;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  border: 1.5px solid #dbeafe;
-  box-shadow: 0 20px 60px rgba(26, 58, 107, 0.2);
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f0f4fb;
-}
-
-.modal-title {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #1a3a6b;
-  margin: 0;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1rem;
-  color: #6b82a0;
-  cursor: pointer;
-  padding: 4px;
-}
-
-.modal-close:hover { color: #1a3a6b; }
-
-.modal-body {
-  padding: 24px;
-}
-
-.modal-footer {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  padding: 16px 24px;
-  border-top: 1px solid #f0f4fb;
-}
-
-/* Form */
-.form-row2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.form-field {
-  margin-bottom: 16px;
-}
-
-.form-label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #5a7a9e;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.form-input {
-  width: 100%;
-  background: #f8faff;
-  border: 1.5px solid #dbeafe;
-  border-radius: 8px;
-  padding: 10px 14px;
-  color: #1a3a6b;
-  font-size: 0.9rem;
-  box-sizing: border-box;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.form-input:focus {
-  border-color: #1a3a6b;
-}
-
-.form-textarea {
-  resize: vertical;
-  font-family: inherit;
-}
-
-.form-checks {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 12px;
-}
-
-.check-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.88rem;
-  color: #5a7a9e;
-  cursor: pointer;
-}
-
-.check-input {
-  accent-color: #1a3a6b;
-}
-
-.form-error {
-  color: #c0392b;
-  font-size: 0.82rem;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 6px;
-  padding: 8px 12px;
-  margin-top: 4px;
-}
-
-@media (max-width: 640px) {
-  .page { padding: 20px 16px; }
-}
+/* Modal Overlay base style */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal { background: white; padding: 24px; border-radius: 8px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; }
 </style>
