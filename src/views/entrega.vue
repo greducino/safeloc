@@ -208,22 +208,39 @@ function fmtDate(d) {
 </script>
 
 <style scoped>
-.page { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
+/* Elemento Raiz da Página - Ajustado para funcionar lado a lado com a Sidebar */
+.page { 
+  padding: 1.5rem; 
+  width: 100%;
+  max-width: 1100px; 
+  margin: 0; 
+  box-sizing: border-box;
+}
+
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .page-title { font-size: 1.5rem; font-weight: 700; color: #f1f5f9; }
+
+/* Abas (Tabs) */
 .tabs { display: flex; gap: .5rem; background: #0f172a; border-radius: 8px; padding: 4px; width: fit-content; margin-bottom: 1.25rem; }
 .tabs button { padding: .45rem 1rem; border: none; border-radius: 6px; background: transparent; color: #94a3b8; cursor: pointer; font-weight: 600; transition: all .2s; }
 .tabs button.active { background: #38bdf8; color: #0f172a; }
+
 .loading { color: #94a3b8; }
+
+/* Tabelas */
 .tbl { width: 100%; border-collapse: collapse; }
 .tbl th { color: #94a3b8; font-size: .8rem; text-align: left; padding: .5rem .75rem; border-bottom: 1px solid #334155; }
 .tbl td { color: #f1f5f9; padding: .65rem .75rem; border-bottom: 1px solid #1e293b; font-size: .9rem; }
 .empty { text-align: center; color: #64748b; padding: 2rem !important; }
 .badge-ok { color: #4ade80; font-size: .82rem; }
+
+/* Botões */
 .btn-primary { background: #38bdf8; color: #0f172a; border: none; border-radius: 8px; padding: .55rem 1.1rem; font-weight: 700; cursor: pointer; }
 .btn-ghost   { background: transparent; color: #94a3b8; border: 1px solid #334155; border-radius: 8px; padding: .55rem 1.1rem; cursor: pointer; }
 .btn-sm { padding: .25rem .65rem; border-radius: 6px; border: none; cursor: pointer; font-size: .82rem; font-weight: 600; }
 .btn-ok { background: #38bdf8; color: #0f172a; }
+
+/* Modal & Formatórios */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 50; }
 .modal { background: #1e293b; border-radius: 12px; padding: 2rem; width: 100%; max-width: 420px; }
 .modal h3 { color: #f1f5f9; margin-bottom: 1rem; }

@@ -1,7 +1,6 @@
 <template>
   <MenuNav />
-  <Sidebar />
-  <div class="layout-container">
+   <div class="layout-container">
     <header class="header-section flex-between">
       <div>
         <h1>Controle de Estoque</h1>

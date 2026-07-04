@@ -109,14 +109,14 @@
       </div>
     </section>
 
-    <Fooder />
+    <Footer />
   </div>
 </template>
 
 <script setup>
 import { RouterLink } from 'vue-router'
 import MenuNav from '@/components/menu.vue'
-import Fooder  from '@/components/fooder.vue'
+import Footer from '@/components/footer.vue'
 
 const categorias = [
   { nome: 'Capacete',           icon: '⛑️', cor: '#dbeafe' },

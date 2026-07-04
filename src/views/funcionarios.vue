@@ -2,8 +2,7 @@
   <div>
     <MenuNav />
     <div class="app-layout">
-      <Sidebar />
-      <main class="main-content">
+         <main class="main-content">
         <div class="funcionarios-page">
           <div class="page-header">
             <div class="header-left">

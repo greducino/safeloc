@@ -2,8 +2,7 @@
   <div>
     <MenuNav />
     <div class="app-layout">
-      <Sidebar />
-      <main class="main-content">
+          <main class="main-content">
         <div class="page-header">
           <h1>🦺 Gestão de EPIs</h1>
           <button class="btn btn-primary" @click="abrirModal()">+ Novo EPI</button>

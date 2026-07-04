@@ -37,11 +37,12 @@ safeloc/
 ├── src/
 │   ├── assets/
 │   ├── components/
-│   │   ├── fooder.vue       # Rodapé global
+│   │   ├── footer.vue       # Rodapé global
 │   │   ├── menu.vue         # Navbar superior
 │   │   └── sidebar.vue      # Barra lateral com links
 │   ├── composables/
-│   │   └── useSupabase.js   # ⭐ Toda lógica de dados e auth
+│   │   ├── useAuthStore.js  # Gerenciamento de autenticação e perfil
+│   │   └── useSupabase.js   # Client Supabase
 │   ├── router/
 │   │   └── index.js         # Rotas + guards
 │   ├── views/
